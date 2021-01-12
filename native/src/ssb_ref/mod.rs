@@ -59,3 +59,16 @@ pub fn extract_link(str: &str) -> Option<String> {
         }
     }
 }
+
+/// Strip unwanted characters and lowercase a channel name
+pub fn normalize_channel_name(str: &str) -> Option<String> {
+    let re_filter = Regex::new(r#"\s|[,.?!<>()\[\]#"]"#).unwrap();
+    let name = str.to_string().to_lowercase();
+    let name = re_filter.replace_all(&name, "").to_string();
+
+    match name.len() {
+        0 => None,
+        n if n > 30 => Some(name[0..30].to_string()),
+        _ => Some(name),
+    }
+}
