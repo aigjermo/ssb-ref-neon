@@ -1,0 +1,21 @@
+{
+  "name": "ssb-ref-neon",
+  "version": "2.14.3",
+  "description": "Rust implementation of ssb-ref",
+  "main": "lib/index.js",
+  "author": "Anders Iver Gjermo <code@ai.gjermo.com>",
+  "license": "AGPL-3.0-or-later",
+  "dependencies": {
+    "neon-cli": "^0.7.0"
+  },
+  "scripts": {
+    "test": "tape test-api/*.js | tap-dot",
+    "pretest": "neon build && npm run setup-api-tests",
+    "setup-api-tests": "mkdir -p test-api && rm -rf test-api/* && cp -r node_modules/ssb-ref/test/* test-api/"
+  },
+  "devDependencies": {
+    "ssb-ref": "^2.14.3",
+    "tap-dot": "^2.0.0",
+    "tape": "^5.1.1"
+  }
+}
