@@ -11,10 +11,10 @@ fn try_cast_as<T: Value>(val: Option<Handle<JsValue>>) -> Option<Handle<T>> {
     }
 }
 
-fn is_of_type<'a>(t: &str, mut cx: FunctionContext<'a>) -> JsResult<'a, JsBoolean> {
+fn is_link<T: Fn(Ref) -> bool>(mut cx: FunctionContext, check: T) -> JsResult<JsBoolean> {
     match try_cast_as::<JsString>(cx.argument_opt(0)) {
         Some(arg) => match Ref::from(&arg.value()) {
-            Ok(parsed) if parsed.type_str() == t && !parsed.has_query() => Ok(cx.boolean(true)),
+            Ok(parsed) => Ok(cx.boolean(check(parsed))),
             _ => Ok(cx.boolean(false)),
         },
         _ => Ok(cx.boolean(false)),
@@ -69,20 +69,37 @@ fn normalize_channel(mut cx: FunctionContext) -> JsResult<JsValue> {
 }
 
 register_module!(mut cx, {
-    cx.export_function("isBlob", |cx| is_of_type("blob", cx))?;
-    cx.export_function("isBlobId", |cx| is_of_type("blob", cx))?;
-    cx.export_function("isFeed", |cx| is_of_type("feed", cx))?;
-    cx.export_function("isFeedId", |cx| is_of_type("feed", cx))?;
-    cx.export_function("isMsg", |cx| is_of_type("feed", cx))?;
-    cx.export_function("isMsgId", |cx| is_of_type("feed", cx))?;
+    cx.export_function("isLink", |cx| is_link(cx, |_| true))?;
 
-    cx.export_function("isCloakedMsg", |mut cx| Ok(cx.boolean(false)))?;
-    cx.export_function("isCloakedMsgId", |mut cx| Ok(cx.boolean(false)))?;
+    cx.export_function("isFeedLink", |cx| is_link(cx, |x| x.type_str() == "feed"))?;
+    cx.export_function("isBlobLink", |cx| is_link(cx, |x| x.type_str() == "blob"))?;
+    cx.export_function("isMsgLink", |cx| is_link(cx, |x| x.type_str() == "msg"))?;
 
-    cx.export_function("type", |mut cx| Ok(cx.boolean(false)))?;
-    cx.export_function("isLink", |mut cx| Ok(cx.boolean(false)))?;
-    cx.export_function("isBlobLink", |mut cx| Ok(cx.boolean(false)))?;
-    cx.export_function("isMsgLink", |mut cx| Ok(cx.boolean(false)))?;
+    cx.export_function("isFeed", |cx| {
+        is_link(cx, |x| x.type_str() == "feed" && !x.has_query())
+    })?;
+    cx.export_function("isFeedId", |cx| {
+        is_link(cx, |x| x.type_str() == "feed" && !x.has_query())
+    })?;
+    cx.export_function("isBlob", |cx| {
+        is_link(cx, |x| x.type_str() == "blob" && !x.has_query())
+    })?;
+    cx.export_function("isBlobId", |cx| {
+        is_link(cx, |x| x.type_str() == "blob" && !x.has_query())
+    })?;
+    cx.export_function("isMsg", |cx| {
+        is_link(cx, |x| x.type_str() == "msg" && !x.has_query())
+    })?;
+    cx.export_function("isMsgId", |cx| {
+        is_link(cx, |x| x.type_str() == "msg" && !x.has_query())
+    })?;
+    cx.export_function("isCloakedMsg", |cx| {
+        is_link(cx, |x| x.type_str() == "cloaked_message" && !x.has_query())
+    })?;
+    cx.export_function("isCloakedMsgId", |cx| {
+        is_link(cx, |x| x.type_str() == "cloaked_message" && !x.has_query())
+    })?;
+
 
     cx.export_function("isAddress", |mut cx| Ok(cx.boolean(false)))?;
     cx.export_function("isInvite", |mut cx| Ok(cx.boolean(false)))?;
@@ -93,6 +110,8 @@ register_module!(mut cx, {
     cx.export_function("parseLegacyInvite", |mut cx| Ok(cx.boolean(false)))?;
     cx.export_function("parseMultiServerInvite", |mut cx| Ok(cx.boolean(false)))?;
     cx.export_function("getKeyFromAddress", |mut cx| Ok(cx.boolean(false)))?;
+
+    cx.export_function("type", |mut cx| Ok(cx.boolean(false)))?;
 
     cx.export_function("extract", extract)?;
     cx.export_function("parseLink", parse_link)?;

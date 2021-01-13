@@ -5,8 +5,9 @@ use urlencoding::decode;
 
 pub enum Ref<'a> {
     Feed(&'a str),
-    Message((&'a str, Option<&'a str>)),
     Blob((&'a str, Option<&'a str>)),
+    Message((&'a str, Option<&'a str>)),
+    CloakedMessage((&'a str, Option<&'a str>)),
 }
 
 fn split_query(id: &str) -> (&str, Option<&str>) {
@@ -18,19 +19,26 @@ fn split_query(id: &str) -> (&str, Option<&str>) {
 
 impl Ref<'_> {
     pub fn from(id: &str) -> Result<Ref, &str> {
+        let (id, q) = split_query(id);
         match id.get(0..1) {
-            Some("@") => Ok(Ref::Feed(validate_multikey(id)?)),
-            Some("%") => Ok(Ref::Message(split_query(validate_multihash(id)?))),
-            Some("&") => Ok(Ref::Blob(split_query(validate_multihash(id)?))),
-            _ => Err("unknown reference format"),
+            Some("@") => Ok(Ref::Feed(validate_key(id, "@", ".ed25519")?)),
+            Some("&") => Ok(Ref::Blob((validate_key(id, "&", ".sha256")?, q))),
+            Some("%") if id.ends_with(".sha256") => {
+                Ok(Ref::Message((validate_key(id, "%", ".sha256")?, q)))
+            }
+            Some("%") if id.ends_with(".cloaked") => {
+                Ok(Ref::CloakedMessage((validate_key(id, "%", ".cloaked")?, q)))
+            }
+            _ => Err("Invalid or unknown reference format"),
         }
     }
 
     pub fn id(&self) -> String {
         match self {
             Ref::Feed(id) => id.to_string(),
-            Ref::Message((id, _)) => id.to_string(),
             Ref::Blob((id, _)) => id.to_string(),
+            Ref::Message((id, _)) => id.to_string(),
+            Ref::CloakedMessage((id, _)) => id.to_string(),
         }
     }
 
@@ -45,36 +53,33 @@ impl Ref<'_> {
     pub fn query(&self) -> Option<QString> {
         match self {
             Ref::Feed(_) => None,
-            Ref::Message((_, q)) => q.map(|q| QString::from(q)),
             Ref::Blob((_, q)) => q.map(|q| QString::from(q)),
+            Ref::Message((_, q)) => q.map(|q| QString::from(q)),
+            Ref::CloakedMessage((_, q)) => q.map(|q| QString::from(q)),
         }
     }
 
     pub fn type_str(&self) -> &str {
         match self {
             Ref::Feed(_) => "feed",
-            Ref::Message(_) => "message",
             Ref::Blob(_) => "blob",
+            Ref::Message(_) => "msg",
+            Ref::CloakedMessage(_) => "cloaked_message",
         }
     }
 }
 
-/// Multikeys must start with `@` and contain a base64 encode 32 byte value, followed by `.ed25519`.
-fn validate_multikey(id: &str) -> Result<&str, &str> {
-    let re_key = Regex::new(r"^@[A-Za-z0-9/+]{42}[AEIMQUYcgkosw048]=\.ed25519$").unwrap();
-    match re_key.is_match(id) {
-        true => Ok(id),
-        false => Err("not a valid multikey reference"),
-    }
-}
+/// Valid keys must contain a canonical base64 encoded 32 byte value.
+fn validate_key<'a>(key: &'a str, prefix: &str, suffix: &str) -> Result<&'a str, &'a str> {
+    let re_key = Regex::new(r"^[A-Za-z0-9/+]{42}[AEIMQUYcgkosw048]=$").unwrap();
 
-/// Multihashes must start with `%` or `&` and contain a base64 encode 32 byte value, followed by `.sha256`, and optionally a query string.
-fn validate_multihash(id: &str) -> Result<&str, &str> {
-    let re_key =
-        Regex::new(r"^[&%][A-Za-z0-9/+]{42}[AEIMQUYcgkosw048]=\.sha256(?:\?\S*)?$").unwrap();
-    match re_key.is_match(id) {
-        true => Ok(id),
-        false => Err("not a valid multihash reference"),
+    match key
+        .strip_prefix(prefix)
+        .and_then(|k| k.strip_suffix(suffix))
+        .and_then(|k| Some(re_key.is_match(k)))
+    {
+        Some(true) => Ok(key),
+        _ => Err("not a valid base64 encoded key"),
     }
 }
 
