@@ -73,6 +73,26 @@ register_module!(mut cx, {
     cx.export_function("isBlobId", |cx| is_of_type("blob", cx))?;
     cx.export_function("isFeed", |cx| is_of_type("feed", cx))?;
     cx.export_function("isFeedId", |cx| is_of_type("feed", cx))?;
+    cx.export_function("isMsg", |cx| is_of_type("feed", cx))?;
+    cx.export_function("isMsgId", |cx| is_of_type("feed", cx))?;
+
+    cx.export_function("isCloakedMsg", |mut cx| Ok(cx.boolean(false)))?;
+    cx.export_function("isCloakedMsgId", |mut cx| Ok(cx.boolean(false)))?;
+
+    cx.export_function("type", |mut cx| Ok(cx.boolean(false)))?;
+    cx.export_function("isLink", |mut cx| Ok(cx.boolean(false)))?;
+    cx.export_function("isBlobLink", |mut cx| Ok(cx.boolean(false)))?;
+    cx.export_function("isMsgLink", |mut cx| Ok(cx.boolean(false)))?;
+
+    cx.export_function("isAddress", |mut cx| Ok(cx.boolean(false)))?;
+    cx.export_function("isInvite", |mut cx| Ok(cx.boolean(false)))?;
+    cx.export_function("isLegacyInvite", |mut cx| Ok(cx.boolean(false)))?;
+    cx.export_function("isMultiServerInvite", |mut cx| Ok(cx.boolean(false)))?;
+    cx.export_function("parseAddress", |mut cx| Ok(cx.boolean(false)))?;
+    cx.export_function("parseInvite", |mut cx| Ok(cx.boolean(false)))?;
+    cx.export_function("parseLegacyInvite", |mut cx| Ok(cx.boolean(false)))?;
+    cx.export_function("parseMultiServerInvite", |mut cx| Ok(cx.boolean(false)))?;
+    cx.export_function("getKeyFromAddress", |mut cx| Ok(cx.boolean(false)))?;
 
     cx.export_function("extract", extract)?;
     cx.export_function("parseLink", parse_link)?;
