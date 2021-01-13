@@ -16,7 +16,6 @@ neon-build = "0.7.0"
 
 [dependencies]
 neon = "0.7.0"
-ssb-multiformats = "0.4.0"
 qstring = "0.7.2"
 regex = "1.4.3"
 urlencoding = "1.1.1"
